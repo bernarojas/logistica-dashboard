@@ -394,12 +394,12 @@ export function Heatmap({ rows, cols, data, colorHigh = "#06d6f0" }: HeatmapProp
             {cols.map((c, i) => (
               <th
                 key={i}
-                className="p-1 text-center text-[var(--color-brand-muted-text)] font-normal max-w-16"
+                className="p-1 text-center text-[var(--color-brand-muted-text)] font-normal max-w-[80px] sm:max-w-none"
               >
                 {/* Column headers: tooltip on mobile */}
                 <LabelTooltip
                   text={c}
-                  className="block truncate max-w-[56px] cursor-default select-none"
+                  className="block truncate max-w-[80px] sm:max-w-none cursor-default select-none"
                 />
               </th>
             ))}
@@ -409,10 +409,10 @@ export function Heatmap({ rows, cols, data, colorHigh = "#06d6f0" }: HeatmapProp
           {rows.map((row, ri) => (
             <tr key={ri}>
               {/* Row label: tooltip on mobile */}
-              <td className="p-1 text-[var(--color-brand-muted-text)] pr-3 font-medium max-w-[80px]">
+              <td className="p-1 text-[var(--color-brand-muted-text)] pr-3 font-medium max-w-[130px] sm:max-w-none">
                 <LabelTooltip
                   text={row}
-                  className="block truncate max-w-[80px] cursor-default select-none"
+                  className="block truncate max-w-[130px] sm:max-w-none cursor-default select-none"
                 />
               </td>
               {cols.map((_, ci) => {
