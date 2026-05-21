@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 // ── Viewport-aware Label Tooltip ───────────────────────────────
 // • Shows on hover (all screens) and tap (mobile) whenever text is truncated.
@@ -19,16 +20,38 @@ interface TooltipPos {
   below: boolean;
 }
 
-function LabelTooltip({ text, className }: { text: string; className?: string }) {
+export function LabelTooltip({ text, className }: { text: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<TooltipPos | null>(null);
   const spanRef = useRef<HTMLSpanElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // True only if the element is actually clipped
+  // Close tooltip on window scroll to prevent detached floating tooltips on mobile
+  useEffect(() => {
+    if (!open) return;
+    const handleScroll = () => setOpen(false);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [open]);
+
+  // True only if the element is actually clipped/truncated
   const isTruncated = useCallback(() => {
     const el = spanRef.current;
-    return el ? el.scrollWidth > el.offsetWidth + 1 : false;
+    if (!el) return false;
+
+    // Check basic scrollWidth vs offsetWidth first (handles most normal layouts)
+    if (el.scrollWidth > el.offsetWidth + 0.5) return true;
+
+    // Range API fallback to handle subpixel rounding issues and Safari quirks
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const rangeWidth = range.getBoundingClientRect().width;
+      const elWidth = el.getBoundingClientRect().width;
+      return rangeWidth > elWidth + 0.5;
+    } catch {
+      return false;
+    }
   }, []);
 
   const calcPos = useCallback((): TooltipPos | null => {
@@ -51,7 +74,9 @@ function LabelTooltip({ text, className }: { text: string; className?: string })
     );
 
     // ── Vertical flip ────────────────────────────────────────
-    const below = rect.top < TOOLTIP_H_ESTIMATE + TOOLTIP_MARGIN;
+    // Accounts for sticky header + nav (approx 115px height from viewport top)
+    const stickyOffset = 115;
+    const below = rect.top < stickyOffset + TOOLTIP_H_ESTIMATE + TOOLTIP_MARGIN;
     const top = below ? rect.bottom + 8 : rect.top - 8;
 
     return { left, top, arrowLeft, below };
@@ -107,7 +132,7 @@ function LabelTooltip({ text, className }: { text: string; className?: string })
         {text}
       </span>
 
-      {open && pos && (
+      {open && pos && createPortal(
         <div
           className="fixed z-[9999] pointer-events-none"
           style={{
@@ -161,7 +186,8 @@ function LabelTooltip({ text, className }: { text: string; className?: string })
               }}
             />
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -238,18 +264,16 @@ export function DonutChart({ data, title, size = 160 }: DonutChartProps) {
   }, []);
 
   const total = data.reduce((s, d) => s + d.value, 0);
-  let cumulative = 0;
-
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size / 2 - 4;
   const innerR = outerR * 0.62;
 
-  const segments = data.map((d) => {
-    const start = (cumulative / total) * 360;
-    cumulative += d.value;
-    const end = (cumulative / total) * 360;
+  const segments = data.map((d, index) => {
+    const sumBefore = data.slice(0, index).reduce((acc, item) => acc + item.value, 0);
+    const start = (sumBefore / total) * 360;
+    const end = ((sumBefore + d.value) / total) * 360;
     return { ...d, startAngle: start, endAngle: end };
   });
 
@@ -322,9 +346,10 @@ export function DonutChart({ data, title, size = 160 }: DonutChartProps) {
               className="w-2.5 h-2.5 rounded-full shrink-0"
               style={{ background: d.color }}
             />
-            <span className="text-[10px] text-[var(--color-brand-muted-text)] truncate">
-              {d.label}
-            </span>
+            <LabelTooltip
+              text={d.label}
+              className="text-[10px] text-[var(--color-brand-muted-text)] truncate cursor-default select-none"
+            />
             <span className="text-[10px] font-bold text-[var(--color-brand-text)] ml-auto">
               {Math.round((d.value / total) * 100)}%
             </span>

@@ -11,7 +11,7 @@ import {
   type SurveyRecord,
   type InterviewRecord,
 } from "@/utils/mockData";
-import { BarChart, DonutChart, Heatmap, StatCard, RatingBar } from "@/components/Charts";
+import { BarChart, DonutChart, Heatmap, StatCard, RatingBar, LabelTooltip } from "@/components/Charts";
 
 // ── Colour palette ─────────────────────────────────────────────
 const COLORS = ["#06d6f0", "#10f0a0", "#f0a010", "#8b5cf6", "#f05060", "#f06010", "#0062ff", "#00e5ff"];
@@ -45,9 +45,13 @@ export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setSurveys(generateSurveyData(120));
-    setInterviews(generateInterviewData(20));
-    setMounted(true);
+    // Load data asynchronously to avoid synchronous setState inside useEffect and prevent SSR mismatch
+    const t = setTimeout(() => {
+      setSurveys(generateSurveyData(120));
+      setInterviews(generateInterviewData(20));
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(t);
   }, []);
 
   const [activeTab, setActiveTab] = useState("overview");
@@ -660,7 +664,12 @@ export default function Dashboard() {
                   <tbody>
                     {interviews.slice(0, 12).map((iv) => (
                       <tr key={iv.id} className="border-b border-[var(--color-brand-border)]/30 hover:bg-[var(--color-brand-muted)]/20 transition-colors">
-                        <td className="py-2 px-3 font-medium text-[var(--color-brand-text)] max-w-48 truncate" title={iv.empresa}>{iv.empresa}</td>
+                        <td className="py-2 px-3 font-medium text-[var(--color-brand-text)] max-w-48">
+                          <LabelTooltip
+                            text={iv.empresa}
+                            className="block truncate max-w-48 cursor-default select-none"
+                          />
+                        </td>
                         <td className="py-2 px-3">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-medium"
                             style={{
@@ -675,7 +684,12 @@ export default function Dashboard() {
                         <td className="py-2 px-3">
                           <RatingBar value={iv.disposicionUsarPlataforma} color="#10f0a0" />
                         </td>
-                        <td className="py-2 px-3 text-[var(--color-brand-muted-text)] max-w-48 truncate" title={iv.principalesProblemaCadena[0]}>{iv.principalesProblemaCadena[0]}</td>
+                        <td className="py-2 px-3 text-[var(--color-brand-muted-text)] max-w-48">
+                          <LabelTooltip
+                            text={iv.principalesProblemaCadena[0]}
+                            className="block truncate max-w-48 cursor-default select-none"
+                          />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
