@@ -1,0 +1,242 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-bg: #080d1a;
+  --color-brand-surface: #0f1629;
+  --color-brand-card: #131c35;
+  --color-brand-border: #1e2d4d;
+  --color-brand-muted: #2a3a5c;
+  --color-brand-cyan: #06d6f0;
+  --color-brand-emerald: #10f0a0;
+  --color-brand-amber: #f0a010;
+  --color-brand-rose: #f05060;
+  --color-brand-violet: #8b5cf6;
+  --color-brand-text: #e2eaf8;
+  --color-brand-muted-text: #7a90b8;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  src: url('https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2') format('woff2');
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--color-brand-bg);
+  color: var(--color-brand-text);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-brand-surface); }
+::-webkit-scrollbar-thumb { background: var(--color-brand-muted); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-brand-cyan); }
+
+/* ── Glass & Glow ── */
+.glass-card {
+  background: rgba(19, 28, 53, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--color-brand-border);
+  border-radius: var(--radius-xl);
+}
+.glow-cyan  { box-shadow: 0 0 30px rgba(6, 214, 240, 0.15); }
+.glow-emerald { box-shadow: 0 0 30px rgba(16, 240, 160, 0.15); }
+
+/* ── Gradient text ── */
+.gradient-text-cyan {
+  background: linear-gradient(135deg, #06d6f0, #10f0a0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gradient-text-amber {
+  background: linear-gradient(135deg, #f0a010, #f05060);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Grid bg ── */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(6, 214, 240, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 214, 240, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ══════════════════════════════════════
+   KEYFRAMES
+══════════════════════════════════════ */
+
+/* Tab content: fade + slide up */
+@keyframes tabEnter {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Tab content: fade out + slide down (exit) */
+@keyframes tabExit {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-10px); }
+}
+
+/* Staggered card rise */
+@keyframes cardRise {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Subtle pulse for live indicator */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* Shimmer for loading bars */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Bar fill from 0 → target width (driven by JS setting --bar-w) */
+@keyframes barGrow {
+  from { width: 0; }
+  to   { width: var(--bar-w, 100%); }
+}
+
+/* Donut segment pop in */
+@keyframes segmentPop {
+  from { opacity: 0; transform-origin: center; transform: scale(0.4); }
+  to   { opacity: 0.9; transform: scale(1); }
+}
+
+/* Counter shimmer overlay */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Glow ring pulse on stat cards */
+@keyframes glowRing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 214, 240, 0); }
+  50%       { box-shadow: 0 0 0 4px rgba(6, 214, 240, 0.12); }
+}
+
+/* Floating badge */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-4px); }
+}
+
+/* ══════════════════════════════════════
+   ANIMATION CLASSES
+══════════════════════════════════════ */
+
+.animate-tab-enter {
+  animation: tabEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2.4s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Staggered children — add .stagger on the parent */
+.stagger > * {
+  opacity: 0;
+  animation: cardRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(1)  { animation-delay: 0.04s; }
+.stagger > *:nth-child(2)  { animation-delay: 0.10s; }
+.stagger > *:nth-child(3)  { animation-delay: 0.16s; }
+.stagger > *:nth-child(4)  { animation-delay: 0.22s; }
+.stagger > *:nth-child(5)  { animation-delay: 0.28s; }
+.stagger > *:nth-child(6)  { animation-delay: 0.34s; }
+.stagger > *:nth-child(7)  { animation-delay: 0.40s; }
+.stagger > *:nth-child(8)  { animation-delay: 0.46s; }
+
+/* Bar fill — width animated via CSS var */
+.bar-fill {
+  animation: barGrow 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  width: var(--bar-w, 0%);
+}
+
+/* Donut segments */
+.segment-pop {
+  animation: segmentPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Stat value count-up reveal */
+.stat-value-enter {
+  animation: countUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Glow ring on hover for stat cards */
+.stat-card-glow:hover {
+  animation: glowRing 1.5s ease-in-out infinite;
+}
+
+/* Hover lift */
+/* Hide scrollbar but keep scrollable */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ensure touch targets are at least 44px for accessibility */
+@media (max-width: 640px) {
+  button {
+    min-height: 44px;
+  }
+  select {
+    min-height: 44px;
+  }
+}
+
+/* Hover lift */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(6, 214, 240, 0.12);
+}
+
+/* Tab indicator underline slide */
+.tab-underline {
+  position: relative;
+  transition: color 0.2s ease;
+}
+.tab-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--color-brand-cyan);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 2px 2px 0 0;
+}
+.tab-underline.active::after {
+  transform: scaleX(1);
+}
