@@ -55,11 +55,22 @@ export default function Dashboard() {
   const [crossA, setCrossA] = useState<keyof SurveyRecord>("paisOrigen");
   const [crossB, setCrossB] = useState<keyof SurveyRecord>("disposicionPago");
 
+  // ── Scroll to top on tab change ─────────────────────────────
+  // useEffect fires AFTER React commits the DOM update, which means
+  // the new tab content is already painted when we scroll — this beats
+  // browser scroll-anchoring that re-adjusts position on content change.
+  useEffect(() => {
+    if (!mounted) return; // skip initial mount
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;           // iOS Safari
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   const handleTabChange = (id: string) => {
     if (id === activeTab) return;
     setActiveTab(id);
     setTabKey((k) => k + 1);
-    window.scrollTo(0, 0);
   };
 
   // ── Overview stats ──────────────────────────────────────────
@@ -246,7 +257,9 @@ export default function Dashboard() {
       </nav>
 
       {/* ── Content ── */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      {/* overflow-anchor:none stops the browser from adjusting scroll
+           position when the tab content height changes */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8" style={{ overflowAnchor: "none" }}>
 
         {/* ─── TAB: OVERVIEW ─── */}
         {activeTab === "overview" && (

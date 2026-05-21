@@ -2,49 +2,107 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-// ── Label Tooltip (hover + tap) ────────────────────────────────
-// Shows a floating glassmorphism bubble with the full label text.
-// Works on both desktop (hover) and mobile (tap to toggle).
+// ── Viewport-aware Label Tooltip ───────────────────────────────
+// • Shows on hover (all screens) and tap (mobile) whenever text is truncated.
+// • Stays fully visible by clamping to viewport edges and moving the arrow to
+//   always point at the label, even when the bubble is shifted left/right.
+// • If there's no space above, the bubble flips below the label.
+
+const TOOLTIP_MAX_W = 240; // px – must match maxWidth below
+const TOOLTIP_MARGIN = 10; // min gap from viewport edge
+const TOOLTIP_H_ESTIMATE = 38; // rough height to detect flip
+
+interface TooltipPos {
+  left: number;
+  top: number;
+  arrowLeft: number; // px from left edge of bubble
+  below: boolean;
+}
+
 function LabelTooltip({ text, className }: { text: string; className?: string }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [pos, setPos] = useState<TooltipPos | null>(null);
   const spanRef = useRef<HTMLSpanElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Check if text is actually truncated
+  // True only if the element is actually clipped
   const isTruncated = useCallback(() => {
     const el = spanRef.current;
-    return el ? el.scrollWidth > el.offsetWidth : false;
+    return el ? el.scrollWidth > el.offsetWidth + 1 : false;
   }, []);
 
-  const show = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!isTruncated()) return;
-    const rect = spanRef.current!.getBoundingClientRect();
-    // Position: above the label, horizontally centred on it
-    setPos({ x: rect.left + rect.width / 2, y: rect.top - 8 });
-    setOpen(true);
-    e.stopPropagation();
-  }, [isTruncated]);
+  const calcPos = useCallback((): TooltipPos | null => {
+    const el = spanRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth;
 
-  const hide = useCallback(() => setOpen(false), []);
+    const anchorCenterX = rect.left + rect.width / 2;
 
-  // Close when tapping anywhere else on mobile
+    // ── Horizontal clamping ──────────────────────────────────
+    // Ideal: bubble centred on the label
+    let left = anchorCenterX - TOOLTIP_MAX_W / 2;
+    left = Math.max(TOOLTIP_MARGIN, Math.min(left, vw - TOOLTIP_MAX_W - TOOLTIP_MARGIN));
+
+    // Arrow must point to the original anchor, clamped inside the bubble
+    const arrowLeft = Math.max(
+      12,
+      Math.min(anchorCenterX - left, TOOLTIP_MAX_W - 12)
+    );
+
+    // ── Vertical flip ────────────────────────────────────────
+    const below = rect.top < TOOLTIP_H_ESTIMATE + TOOLTIP_MARGIN;
+    const top = below ? rect.bottom + 8 : rect.top - 8;
+
+    return { left, top, arrowLeft, below };
+  }, []);
+
+  const show = useCallback(
+    (e?: React.MouseEvent | React.TouchEvent) => {
+      if (!isTruncated()) return;
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      const p = calcPos();
+      if (p) { setPos(p); setOpen(true); }
+      e?.stopPropagation();
+    },
+    [isTruncated, calcPos]
+  );
+
+  const hide = useCallback(() => {
+    hideTimer.current = setTimeout(() => setOpen(false), 80);
+  }, []);
+
+  // Dismiss on tap-outside (mobile)
   useEffect(() => {
     if (!open) return;
-    const close = () => setOpen(false);
-    document.addEventListener("touchstart", close, { passive: true });
-    return () => document.removeEventListener("touchstart", close);
+    const dismiss = (e: TouchEvent) => {
+      if (!spanRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("touchstart", dismiss, { passive: true });
+    return () => document.removeEventListener("touchstart", dismiss);
   }, [open]);
+
+  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
+
+  // Arrow style helpers
+  const arrowBase: React.CSSProperties = {
+    position: "absolute",
+    left: pos?.arrowLeft ?? 0,
+    transform: "translateX(-50%)",
+    width: 0,
+    height: 0,
+    borderLeft: "6px solid transparent",
+    borderRight: "6px solid transparent",
+  };
 
   return (
     <>
       <span
         ref={spanRef}
         className={className}
-        // Desktop
         onMouseEnter={show}
         onMouseLeave={hide}
-        // Mobile tap
-        onTouchStart={(e) => { show(e); }}
+        onTouchStart={(e) => show(e)}
       >
         {text}
       </span>
@@ -52,44 +110,57 @@ function LabelTooltip({ text, className }: { text: string; className?: string })
       {open && pos && (
         <div
           className="fixed z-[9999] pointer-events-none"
-          style={{ left: pos.x, top: pos.y, transform: "translate(-50%, -100%)" }}
+          style={{
+            left: pos.left,
+            top: pos.top,
+            width: TOOLTIP_MAX_W,
+            // Bubble is above → translateY(-100%), below → translateY(0)
+            transform: pos.below ? "translateY(0)" : "translateY(-100%)",
+          }}
         >
+          {/* Arrow pointing DOWN (tooltip is above the label) */}
+          {!pos.below && (
+            <div
+              style={{
+                ...arrowBase,
+                bottom: -6,
+                borderTop: "6px solid rgba(8,20,48,0.97)",
+              }}
+            />
+          )}
+
           {/* Bubble */}
           <div
             style={{
-              background: "rgba(8,22,50,0.92)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              border: "1px solid rgba(6,214,240,0.25)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(6,214,240,0.08)",
-              borderRadius: "8px",
-              padding: "6px 10px",
-              fontSize: "11px",
+              background: "rgba(8,20,48,0.97)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              border: "1px solid rgba(6,214,240,0.30)",
+              boxShadow:
+                "0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(6,214,240,0.06)",
+              borderRadius: 10,
+              padding: "7px 13px",
+              fontSize: 12,
               fontWeight: 500,
               color: "#e2eaf8",
-              whiteSpace: "nowrap",
-              maxWidth: "220px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              animation: "tooltipPop 0.18s cubic-bezier(0.34,1.56,0.64,1) both",
+              lineHeight: 1.45,
+              wordBreak: "break-word",
+              animation: "tooltipPop 0.2s cubic-bezier(0.34,1.56,0.64,1) both",
             }}
           >
             {text}
           </div>
-          {/* Arrow */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: "-5px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: 0,
-              height: 0,
-              borderLeft: "5px solid transparent",
-              borderRight: "5px solid transparent",
-              borderTop: "5px solid rgba(8,22,50,0.92)",
-            }}
-          />
+
+          {/* Arrow pointing UP (tooltip is below the label) */}
+          {pos.below && (
+            <div
+              style={{
+                ...arrowBase,
+                top: -6,
+                borderBottom: "6px solid rgba(8,20,48,0.97)",
+              }}
+            />
+          )}
         </div>
       )}
     </>
