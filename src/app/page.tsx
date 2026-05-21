@@ -178,7 +178,7 @@ export default function Dashboard() {
   // Render a minimal skeleton during SSR / before hydration
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-grid flex items-center justify-center">
+      <div className="min-h-screen bg-grid flex items-center justify-center" suppressHydrationWarning>
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-2xl animate-pulse-slow">
             🚛
@@ -190,7 +190,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-grid">
+    <div className="min-h-screen bg-grid" suppressHydrationWarning>
       {/* ── Header ── */}
       <header className="border-b border-[var(--color-brand-border)] bg-[var(--color-brand-surface)]/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
