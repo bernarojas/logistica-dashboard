@@ -1,6 +1,100 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+
+// ── Label Tooltip (hover + tap) ────────────────────────────────
+// Shows a floating glassmorphism bubble with the full label text.
+// Works on both desktop (hover) and mobile (tap to toggle).
+function LabelTooltip({ text, className }: { text: string; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const spanRef = useRef<HTMLSpanElement>(null);
+
+  // Check if text is actually truncated
+  const isTruncated = useCallback(() => {
+    const el = spanRef.current;
+    return el ? el.scrollWidth > el.offsetWidth : false;
+  }, []);
+
+  const show = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!isTruncated()) return;
+    const rect = spanRef.current!.getBoundingClientRect();
+    // Position: above the label, horizontally centred on it
+    setPos({ x: rect.left + rect.width / 2, y: rect.top - 8 });
+    setOpen(true);
+    e.stopPropagation();
+  }, [isTruncated]);
+
+  const hide = useCallback(() => setOpen(false), []);
+
+  // Close when tapping anywhere else on mobile
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    document.addEventListener("touchstart", close, { passive: true });
+    return () => document.removeEventListener("touchstart", close);
+  }, [open]);
+
+  return (
+    <>
+      <span
+        ref={spanRef}
+        className={className}
+        // Desktop
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        // Mobile tap
+        onTouchStart={(e) => { show(e); }}
+      >
+        {text}
+      </span>
+
+      {open && pos && (
+        <div
+          className="fixed z-[9999] pointer-events-none"
+          style={{ left: pos.x, top: pos.y, transform: "translate(-50%, -100%)" }}
+        >
+          {/* Bubble */}
+          <div
+            style={{
+              background: "rgba(8,22,50,0.92)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid rgba(6,214,240,0.25)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(6,214,240,0.08)",
+              borderRadius: "8px",
+              padding: "6px 10px",
+              fontSize: "11px",
+              fontWeight: 500,
+              color: "#e2eaf8",
+              whiteSpace: "nowrap",
+              maxWidth: "220px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              animation: "tooltipPop 0.18s cubic-bezier(0.34,1.56,0.64,1) both",
+            }}
+          >
+            {text}
+          </div>
+          {/* Arrow */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "-5px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: 0,
+              height: 0,
+              borderLeft: "5px solid transparent",
+              borderRight: "5px solid transparent",
+              borderTop: "5px solid rgba(8,22,50,0.92)",
+            }}
+          />
+        </div>
+      )}
+    </>
+  );
+}
 
 // ── Animated Bar Chart ────────────────────────────────────────
 interface BarChartProps {
@@ -32,12 +126,11 @@ export function BarChart({ data, color = "#06d6f0", title }: BarChartProps) {
           const pct = (d.value / max) * 100;
           return (
             <div key={i} className="flex items-center gap-2 sm:gap-3">
-              <span
-                className="text-[10px] sm:text-xs text-[var(--color-brand-muted-text)] w-24 sm:w-36 shrink-0 truncate"
-                title={d.label}
-              >
-                {d.label}
-              </span>
+              {/* Label: on mobile uses LabelTooltip, on sm+ plain truncate is fine */}
+              <LabelTooltip
+                text={d.label}
+                className="text-[10px] sm:text-xs text-[var(--color-brand-muted-text)] w-24 sm:w-36 shrink-0 truncate cursor-default select-none"
+              />
               <div className="flex-1 h-5 sm:h-6 bg-[var(--color-brand-muted)] rounded-full overflow-hidden relative">
                 <div
                   className="h-full rounded-full flex items-center justify-end pr-2 transition-[width] duration-700 ease-out"
@@ -207,9 +300,11 @@ export function Heatmap({ rows, cols, data, colorHigh = "#06d6f0" }: HeatmapProp
                 key={i}
                 className="p-1 text-center text-[var(--color-brand-muted-text)] font-normal max-w-16"
               >
-                <span className="block truncate" title={c}>
-                  {c}
-                </span>
+                {/* Column headers: tooltip on mobile */}
+                <LabelTooltip
+                  text={c}
+                  className="block truncate max-w-[56px] cursor-default select-none"
+                />
               </th>
             ))}
           </tr>
@@ -217,8 +312,12 @@ export function Heatmap({ rows, cols, data, colorHigh = "#06d6f0" }: HeatmapProp
         <tbody>
           {rows.map((row, ri) => (
             <tr key={ri}>
-              <td className="p-1 text-[var(--color-brand-muted-text)] whitespace-nowrap pr-3 font-medium">
-                {row}
+              {/* Row label: tooltip on mobile */}
+              <td className="p-1 text-[var(--color-brand-muted-text)] pr-3 font-medium max-w-[80px]">
+                <LabelTooltip
+                  text={row}
+                  className="block truncate max-w-[80px] cursor-default select-none"
+                />
               </td>
               {cols.map((_, ci) => {
                 const val = data[ri]?.[ci] ?? 0;

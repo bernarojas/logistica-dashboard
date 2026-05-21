@@ -59,6 +59,7 @@ export default function Dashboard() {
     if (id === activeTab) return;
     setActiveTab(id);
     setTabKey((k) => k + 1);
+    window.scrollTo(0, 0);
   };
 
   // ── Overview stats ──────────────────────────────────────────

@@ -139,6 +139,12 @@ body {
   50%       { transform: translateY(-4px); }
 }
 
+/* Tooltip pop-in */
+@keyframes tooltipPop {
+  from { opacity: 0; transform: translate(-50%, -100%) scale(0.85); }
+  to   { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+}
+
 /* ══════════════════════════════════════
    ANIMATION CLASSES
 ══════════════════════════════════════ */
